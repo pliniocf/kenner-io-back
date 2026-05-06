@@ -30,8 +30,7 @@ exports.createUsuario = async (req, res) => {
     const { nome, email, senha, cpf, telefone, perfil = 'cliente' } = req.body;
 
     if (!nome || !email || !senha || !telefone) {
-      res.status(400).json({ message: "Campos obrigatórios não preenchidos" })
-      return;
+      return res.status(400).json({ message: "Campos obrigatórios não preenchidos" })
     }
 
     const hash = await bcrypt.hash(senha, 10);
@@ -43,7 +42,13 @@ exports.createUsuario = async (req, res) => {
 
     res.json({ id: result.insertId, nome, email });
   } catch (err) {
-    res.status(500).json(err);
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ message: 'Campo CPF ou email já cadastrados.' })
+    }
+    return res.status(500).json({
+      message: 'Erro interno',
+      error: err.message
+    });
   }
 };
 
