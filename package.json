@@ -21,10 +21,13 @@
   },
   "homepage": "https://github.com/pliniocf/kenner-io-back#readme",
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "mysql2": "^3.22.3"
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.22.3",
+    "prisma": "^5.22.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

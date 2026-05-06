@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model agendamentos {
+  id                                              Int      @id @default(autoincrement())
+  data_hora                                       DateTime @db.DateTime(0)
+  servico_id                                      Int
+  profissional_id                                 Int
+  cliente_id                                      Int
+  ja_realizado                                    Boolean? @default(false)
+  servicos                                        servicos @relation(fields: [servico_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_1")
+  usuarios_agendamentos_profissional_idTousuarios usuarios @relation("agendamentos_profissional_idTousuarios", fields: [profissional_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_2")
+  usuarios_agendamentos_cliente_idTousuarios      usuarios @relation("agendamentos_cliente_idTousuarios", fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_3")
+
+  @@index([cliente_id], map: "cliente_id")
+  @@index([profissional_id], map: "profissional_id")
+  @@index([servico_id], map: "servico_id")
+}
+
+model servicos {
+  id           Int            @id @default(autoincrement())
+  nome         String?        @db.VarChar(100)
+  usuario_id   Int?
+  tempo        DateTime?      @db.Time(0)
+  valor        Decimal?       @db.Decimal(5, 2)
+  agendamentos agendamentos[]
+  usuarios     usuarios?      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "servicos_ibfk_1")
+
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model usuarios {
+  id                                                  Int            @id @default(autoincrement())
+  nome                                                String?        @db.VarChar(100)
+  email                                               String?        @unique(map: "email_UNIQUE") @db.VarChar(100)
+  perfil                                              String?        @db.VarChar(45)
+  senha                                               String?        @db.VarChar(255)
+  telefone                                            String?        @db.VarChar(25)
+  cpf                                                 String?        @unique(map: "cpf_UNIQUE") @db.VarChar(20)
+  agendamentos_agendamentos_profissional_idTousuarios agendamentos[] @relation("agendamentos_profissional_idTousuarios")
+  agendamentos_agendamentos_cliente_idTousuarios      agendamentos[] @relation("agendamentos_cliente_idTousuarios")
+  servicos                                            servicos[]
+}

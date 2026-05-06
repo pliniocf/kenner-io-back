@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const { connectDB } = require('./db');
 
 const app = express();
 const PORT = 3000;
@@ -8,12 +7,12 @@ const PORT = 3000;
 const fs = require("fs");
 const path = require("path");
 
-app.use(cors());
+const prisma = require("./prisma/prismaClient");
 
-// ✅ primeiro middlewares
+app.use(cors());
 app.use(express.json());
 
-// 🔥 depois rotas dinâmicas
+//rotas dinâmicas
 const routesPath = path.join(__dirname, "routes");
 
 fs.readdirSync(routesPath).forEach((file) => {
@@ -25,18 +24,22 @@ fs.readdirSync(routesPath).forEach((file) => {
 
 // rota teste
 app.get("/", (req, res) => {
-  res.send("API de pé");
+  res.send('API de pé');
 });
 
+// iniciar servidor
 async function startServer() {
   try {
-    await connectDB();
+    // 🔥 testa conexão com banco
+    await prisma.$connect();
+    console.log("Conectado ao banco");
 
     app.listen(PORT, () => {
       console.log(`Servidor em http://localhost:${PORT}`);
     });
+
   } catch (err) {
-    console.error('Falha ao iniciar a API');
+    console.error('Erro ao iniciar API:', err);
   }
 }
 

@@ -1,11 +1,12 @@
-const { pool } = require("../db");
+const prisma = require("../prisma/prismaClient");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 // GET
 exports.getUsuarios = async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT * FROM usuarios");
-    res.json(rows);
+    const usuarios = await prisma.usuarios.findMany();
+    res.json(usuarios);
   } catch (err) {
     res.status(500).json(err);
   }
@@ -14,11 +15,11 @@ exports.getUsuarios = async (req, res) => {
 // GET por ID
 exports.getUsuarioById = async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      "SELECT * FROM usuarios WHERE id = ?",
-      [req.params.id]
-    );
-    res.json(rows[0]);
+    const usuario = await prisma.usuarios.findUnique({
+      where: { id: Number(req.params.id) }
+    });
+
+    res.json(usuario);
   } catch (err) {
     res.status(500).json(err);
   }
@@ -27,69 +28,113 @@ exports.getUsuarioById = async (req, res) => {
 // POST
 exports.createUsuario = async (req, res) => {
   try {
-    const { nome, email, senha, cpf, telefone, perfil = 'cliente' } = req.body;
+    const { nome, email, senha, cpf, telefone, perfil = "cliente" } = req.body;
 
     if (!nome || !email || !senha || !telefone) {
-      return res.status(400).json({ message: "Campos obrigatórios não preenchidos" })
+      return res.status(400).json({ message: "Campos obrigatórios não preenchidos" });
     }
 
     const hash = await bcrypt.hash(senha, 10);
 
-    const [result] = await pool.query(
-      "INSERT INTO usuarios (nome, email, senha, cpf, telefone, perfil) VALUES (?, ?, ?, ?, ?, ?)",
-      [nome, email, hash, cpf, telefone, perfil]
-    );
+    const usuario = await prisma.usuarios.create({
+      data: {
+        nome,
+        email,
+        senha: hash,
+        cpf,
+        telefone,
+        perfil
+      }
+    });
 
-    res.json({ id: result.insertId, nome, email });
+    res.json({
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email
+    });
+
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ message: 'Campo CPF ou email já cadastrados.' })
+    if (err.code === "P2002") {
+      return res.status(400).json({ message: "CPF ou email já cadastrados." });
     }
+
     return res.status(500).json({
-      message: 'Erro interno',
+      message: "Erro interno",
       error: err.message
     });
   }
 };
 
+// LOGIN
 exports.loginUsuario = async (req, res) => {
   try {
     const { email, senha } = req.body;
 
-    if (!email || !senha)
-      res.status(400).json({ message: 'É necessário preencher os campos de login e senha' })
-
-    const [rows] = await pool.query(
-      "SELECT * FROM usuarios WHERE email = ?",
-      [email]
-    )
-
-    const { senha: senhaBanco, ...usuarioSemSenha} = rows[0];
-
-    const senhaValida = await bcrypt.compare(senha, senhaBanco);
-
-    if (senhaValida) {
-      res.status(200).json({
-        message: 'Login efetuado',
-        usuario: usuarioSemSenha
-      })
+    if (!email || !senha) {
+      return res.status(400).json({
+        message: "É necessário preencher os campos de login e senha"
+      });
     }
+
+    const usuario = await prisma.usuarios.findUnique({
+      where: { email }
+    });
+
+    if (!usuario) {
+      return res.status(400).json({ message: "Usuário não encontrado" });
+    }
+
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+
+    if (!senhaValida) {
+      return res.status(400).json({ message: "Senha inválida" });
+    }
+
+    //Gera o token do JWT para o usuário
+    const token = jwt.sign(
+      {
+        id: usuario.id,
+        email: usuario.email,
+        perfil: usuario.perfil
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1d"
+      }
+    );
+
+    const { senha: senhaBanco, ...usuarioSemSenha } = usuario;
+
+    return res.status(200).json({
+      message: "Login efetuado",
+      usuario: usuarioSemSenha,
+      token
+    });
+
   } catch (err) {
     res.status(500).json(err);
   }
-}
+};
 
 // PUT
 exports.updateUsuario = async (req, res) => {
   try {
     const { nome, perfil, senha, telefone, cpf } = req.body;
 
-    await pool.query(
-      "UPDATE usuarios SET nome=?, perfil=?, senha=?, telefone=?, cpf=? WHERE id=?",
-      [nome, perfil, senha, telefone, cpf, req.params.id]
-    );
+    let data = { nome, perfil, telefone, cpf };
+
+    // se vier senha, atualiza com hash
+    if (senha) {
+      data.senha = await bcrypt.hash(senha, 10);
+    }
+
+    await prisma.usuarios.update({
+      where: { id: Number(req.params.id) },
+      data
+    });
 
     res.json({ mensagem: "Atualizado com sucesso" });
+
   } catch (err) {
     res.status(500).json(err);
   }
@@ -98,12 +143,12 @@ exports.updateUsuario = async (req, res) => {
 // DELETE
 exports.deleteUsuario = async (req, res) => {
   try {
-    await pool.query(
-      "DELETE FROM usuarios WHERE id=?",
-      [req.params.id]
-    );
+    await prisma.usuarios.delete({
+      where: { id: Number(req.params.id) }
+    });
 
     res.json({ mensagem: "Deletado com sucesso" });
+
   } catch (err) {
     res.status(500).json(err);
   }
