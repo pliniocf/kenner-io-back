@@ -11,6 +11,31 @@ exports.getServicos = async (req, res) => {
   }
 };
 
+// GET dos profissionais que realizam o serviço especifico
+exports.getProfissionaisPorServico = async (req, res) => {
+  try {
+    const servicoId = Number(req.params.id);
+
+    const profissionais = await prisma.profissionais_servicos.findMany({
+      where: { servico_id: servicoId },
+      include: { usuarios: true }
+    });
+
+    const resultado = profissionais.map((item) => ({
+      id: item.usuarios.id,
+      nome: item.usuarios.nome
+    }));
+
+    return res.json(resultado);
+
+  } catch (err) {
+    res.status(500).json({
+      message: "Erro interno",
+      error: err.message
+    });
+  }
+};
+
 // POST
 exports.createServico = async (req, res) => {
   try {
