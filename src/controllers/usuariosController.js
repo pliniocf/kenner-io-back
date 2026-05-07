@@ -28,7 +28,7 @@ exports.getUsuarioById = async (req, res) => {
 // POST
 exports.createUsuario = async (req, res) => {
   try {
-    const { nome, email, senha, cpf, telefone, perfil = "cliente" } = req.body;
+    const { nome, email, senha, cpf, telefone, perfil = "cliente", hora_entrada, hora_saida } = req.body;
 
     if (!nome || !email || !senha || !telefone) {
       return res.status(400).json({ message: "Campos obrigatórios não preenchidos" });
@@ -43,7 +43,9 @@ exports.createUsuario = async (req, res) => {
         senha: hash,
         cpf,
         telefone,
-        perfil
+        perfil,
+        hora_entrada,
+        hora_saida
       }
     });
 
