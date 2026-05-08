@@ -28,10 +28,25 @@ exports.getUsuarioById = async (req, res) => {
 // POST
 exports.createUsuario = async (req, res) => {
   try {
-    const { nome, email, senha, cpf, telefone, perfil = "cliente", hora_entrada, hora_saida } = req.body;
+    const {
+      nome,
+      email,
+      senha,
+      cpf,
+      telefone,
+      perfil = "cliente",
+      hora_entrada,
+      hora_saida,
+      servicos = []
+    } = req.body;
 
     if (!nome || !email || !senha || !telefone) {
       return res.status(400).json({ message: "Campos obrigatórios não preenchidos" });
+    }
+
+    // Funcionário precisa ter serviços
+    if (perfil === "funcionario" && servicos.length === 0) {
+      return res.status(400).json({ message: "Funcionário precisa possuir ao menos um serviço." });
     }
 
     const hash = await bcrypt.hash(senha, 10);
@@ -48,6 +63,16 @@ exports.createUsuario = async (req, res) => {
         hora_saida
       }
     });
+
+    // Cria relações na tabela profissionais_servicos
+    if (perfil === "funcionario") {
+      await prisma.profissionais_servicos.createMany({
+        data: servicos.map(servicoId => ({
+          profissional_id: usuario.id,
+          servico_id: servicoId
+        }))
+      });
+    }
 
     res.json({
       id: usuario.id,

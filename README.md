@@ -26,6 +26,7 @@ usuarios
 
 Os dados referentes ao banco estão em:
 ```./prisma/schema.prisma```
+Atenção: Como o cadastro de serviços infelizmente não foi possível no momento, os serviços teriam que ser criadosa mão no MySQL. Colunas: id, nome (VARCHAR(100)), tempo (TIME) e valor (DECIMAL(5,2)). Para rodar aqui o MySQL Workbench estava conectado ao banco durante o teste do projeto.
 
 ## Arquitetura
 
